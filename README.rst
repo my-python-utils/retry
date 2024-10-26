@@ -50,6 +50,7 @@ retry decorator
                        fixed if a number, random if a range tuple (min, max)
         :param logger: logger.warning(fmt, error, delay) will be called on failed attempts.
                        default: retry.logging_logger. if None, logging is disabled.
+        :param callbacks: a list of function to execute when a retry happens. default: None (no callback).
         """
 
 Various retrying logic can be achieved by combination of arguments.
@@ -124,6 +125,7 @@ retry_call
                        fixed if a number, random if a range tuple (min, max)
         :param logger: logger.warning(fmt, error, delay) will be called on failed attempts.
                        default: retry.logging_logger. if None, logging is disabled.
+        :param callbacks: a list of function to execute when a retry happens. default: None (no callback).
         :returns: the result of the f function.
         """
 
@@ -155,6 +157,3 @@ This is very similar to the decorator, except that it takes a function and its a
         print(result)
 
     what_is_my_ip("conservative")
-
-
-

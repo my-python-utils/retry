@@ -12,17 +12,16 @@ import time
 
 import pytest
 
-from retry.api import retry_call
-from retry.api import retry
+from retry.api import retry, retry_call
 
 
-def test_retry(monkeypatch):
+def test_retry(monkeypatch, **kwargs):
     mock_sleep_time = [0]
 
     def mock_sleep(seconds):
         mock_sleep_time[0] += seconds
 
-    monkeypatch.setattr(time, 'sleep', mock_sleep)
+    monkeypatch.setattr(time, "sleep", mock_sleep)
 
     hit = [0]
 
@@ -30,7 +29,7 @@ def test_retry(monkeypatch):
     delay = 1
     backoff = 2
 
-    @retry(tries=tries, delay=delay, backoff=backoff)
+    @retry(tries=tries, delay=delay, backoff=backoff, **kwargs)
     def f():
         hit[0] += 1
         1 / 0
@@ -38,21 +37,47 @@ def test_retry(monkeypatch):
     with pytest.raises(ZeroDivisionError):
         f()
     assert hit[0] == tries
-    assert mock_sleep_time[0] == sum(
-        delay * backoff ** i for i in range(tries - 1))
+    assert mock_sleep_time[0] == sum(delay * backoff**i for i in range(tries - 1))
+
+
+def test_retry_with_logger(monkeypatch):
+    try:
+        from loguru import logger
+    except ImportError:
+        pytest.skip(reason="loguru not installed")
+    else:
+        return test_retry(monkeypatch, logger=logger)
+
+
+def test_retry_with_callbacks(monkeypatch):
+    callbacks = [
+        lambda **kwargs: print(kwargs),
+    ]
+
+    try:
+        from loguru import logger
+    except ImportError:
+        pass
+    else:
+        callbacks.append(
+            lambda **kwargs: logger.warning(f"{kwargs['e']}, retrying in {kwargs['_delay']} seconds..."),
+        )
+
+    return test_retry(monkeypatch, callbacks=callbacks)
 
 
 def test_tries_inf():
     hit = [0]
     target = 10
 
-    @retry(tries=float('inf'))
+    @retry(tries=float("inf"))
     def f():
         hit[0] += 1
         if hit[0] == target:
             return target
         else:
             raise ValueError
+
     assert f() == target
 
 
@@ -67,6 +92,7 @@ def test_tries_minus1():
             return target
         else:
             raise ValueError
+
     assert f() == target
 
 
@@ -76,7 +102,7 @@ def test_max_delay(monkeypatch):
     def mock_sleep(seconds):
         mock_sleep_time[0] += seconds
 
-    monkeypatch.setattr(time, 'sleep', mock_sleep)
+    monkeypatch.setattr(time, "sleep", mock_sleep)
 
     hit = [0]
 
@@ -102,7 +128,7 @@ def test_fixed_jitter(monkeypatch):
     def mock_sleep(seconds):
         mock_sleep_time[0] += seconds
 
-    monkeypatch.setattr(time, 'sleep', mock_sleep)
+    monkeypatch.setattr(time, "sleep", mock_sleep)
 
     hit = [0]
 
@@ -173,13 +199,13 @@ def test_retry_call_with_kwargs():
         else:
             raise RuntimeError
 
-    kwargs = {'value': -1}
+    kwargs = {"value": -1}
     result = None
-    f_mock = MagicMock(spec=f, return_value=kwargs['value'])
+    f_mock = MagicMock(spec=f, return_value=kwargs["value"])
     try:
         result = retry_call(f_mock, fkwargs=kwargs)
     except RuntimeError:
         pass
 
-    assert result == kwargs['value']
+    assert result == kwargs["value"]
     assert f_mock.call_count == 1
