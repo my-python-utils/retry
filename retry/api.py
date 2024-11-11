@@ -46,7 +46,7 @@ def __retry_internal(
                 raise
 
             if logger is not None:
-                logger.warning(f"{e}, retrying in {_delay} seconds...")
+                logger.warning(f"\n{e.with_traceback(None)}\nretrying in {_delay} seconds...")
 
             for callback in callbacks or []:
                 callback(**locals())
